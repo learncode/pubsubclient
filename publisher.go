@@ -56,11 +56,7 @@ func (publisher *Publisher) Publish(ctx context.Context, payload interface{}, to
 		if err != nil {
 			return err
 		}
-		response := topic.Publish(ctx, message)
-		_, err = response.Get(ctx)
-		if err != nil {
-			return err
-		}
+		topic.Publish(ctx, message)
 	}
 
 	return nil

@@ -29,13 +29,13 @@ if err != nil {
     log.Fatalf("Error occured while creating a publisher, Err: %v", err)
 }
 
-// All's good go ahead and publish
 
 // StopAll method will be used to publish all the messages and stop all
 // the goroutines that handle publish. There by gauranteeing the messages
 // are flushed out from the internal queue to google pub/sub
 defer publisher.StopAll()
 
+// All's good go ahead and publish
 for i := 0; i < 100; i++ {
     // Publish returns an error. The publish method also gives the ability
     // to publish the `same message` to more than `one topic`
