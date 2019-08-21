@@ -20,8 +20,9 @@ publisherConfig := pubsubclient.PublisherConfig{
     ProjectID: projectName,
 }
 
-// Passing the config to GetPublisher fetches a publisher and errors
-publisher, err := pubsubclient.GetPublisher(publisherConfig)
+// Passing the context and a config to GetPublisher fetches a publisher and errors
+ctx := context.Background()
+publisher, err := pubsubclient.GetPublisher(ctx, publisherConfig)
 
 // Handle any errors as fatal and do not proceed further
 if err != nil {
@@ -29,11 +30,16 @@ if err != nil {
 }
 
 // All's good go ahead and publish
+
+// StopAll method will be used to publish all the messages and stop all
+// the goroutines that handle publish. There by gauranteeing the messages
+// are flushed out from the internal queue to google pub/sub
+defer publisher.StopAll()
+
 for i := 0; i < 100; i++ {
-    // Publish returns a messageID and an error. MessageID is the message handle
-    // returned by google pubsub. The publish method also gives the ability
+    // Publish returns an error. The publish method also gives the ability
     // to publish the `same message` to more than `one topic`
-    id, err := publisher.Publish(i, []string{topicName})
+    id, err := publisher.Publish(ctx, i, []string{topicName})
     if err != nil {
         log.Printf("Error occured while publishing the message, Err: %v", err)
     }
@@ -66,8 +72,9 @@ subscriberConfig := pubsubclient.SubscriberConfig{
     },
 }
 
-// Passing the config to CreateSubscription fetches a subscriber and errors
-subscriber, err := pubsubclient.CreateSubscription(subscriberConfig)
+// Passing the context and config to CreateSubscription fetches a subscriber and errors
+ctx := context.Background()
+subscriber, err := pubsubclient.CreateSubscription(ctx, subscriberConfig)
 
 // Handle any errors as fatal and do not proceed further
 if err != nil {
@@ -79,8 +86,9 @@ if err != nil {
 // more than one subscriber
 var wg sync.WaitGroup
 wg.Add(1)
-go subscriber.Process(&wg)
-publishMessages(publisher)
+go subscriber.Process(ctx, &wg)
+publishMessages(ctx, publisher)
+publishMessages(ctx, publisher)
 wg.Wait()
 ```
 

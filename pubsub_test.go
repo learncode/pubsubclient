@@ -2,6 +2,7 @@ package pubsubclient_test
 
 import (
 	pubsubclient "backend-components/gopubsubclient"
+	"context"
 	"log"
 	"sync"
 	"testing"
@@ -9,8 +10,7 @@ import (
 	"cloud.google.com/go/pubsub"
 )
 
-// Before running this make sure gcloud emulator is up and running
-
+// If you want to run this locally before running this make sure gcloud emulator is up and running
 const projectName = `<please-enter-your-project-name>`
 const topicName = `<please-enter-a-topic-name>`
 const subscriptionName = `<please-enter-a-subscription-name>`
@@ -21,8 +21,9 @@ func TestTopics(t *testing.T) {
 			ProjectID: projectName,
 		}
 		log.Printf("Publisher config: %+v", publisherConfig)
+		ctx := context.Background()
 
-		publisher, err := pubsubclient.GetPublisher(publisherConfig)
+		publisher, err := pubsubclient.GetPublisher(ctx, publisherConfig)
 		log.Printf("Publisher: %+v", publisher)
 		if err != nil {
 			t.Fatalf("Error occured while creating a publisher, Err: %v", err)
@@ -44,7 +45,7 @@ func TestTopics(t *testing.T) {
 			},
 		}
 		log.Printf("Subscriber config: %+v", subscriberConfig)
-		subscriber, err := pubsubclient.CreateSubscription(subscriberConfig)
+		subscriber, err := pubsubclient.CreateSubscription(ctx, subscriberConfig)
 		if err != nil {
 			t.Fatalf("Error occured while creating a subscriber, Err: %v", err)
 		}
@@ -53,18 +54,18 @@ func TestTopics(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(1)
-		go subscriber.Process(&wg)
-		publishMessages(publisher)
+		go subscriber.Process(ctx, &wg)
+		publishMessages(ctx, publisher)
 		wg.Wait()
 	})
 }
 
-func publishMessages(publisher *pubsubclient.Publisher) {
+func publishMessages(ctx context.Context, publisher *pubsubclient.Publisher) {
+	defer publisher.StopAll()
 	for i := 0; i < 100; i++ {
-		id, err := publisher.Publish(i, []string{topicName})
+		err := publisher.Publish(ctx, i, []string{topicName})
 		if err != nil {
 			log.Printf("Error occured while publishing the message, Err: %v", err)
 		}
-		log.Printf("MessageID: %v", id)
 	}
 }

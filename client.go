@@ -13,8 +13,8 @@ type pubSubClient struct {
 	psclient *pubsub.Client
 }
 
-func getClient(projectID string) (*pubSubClient, error) {
-	client, err := pubsub.NewClient(context.Background(), projectID)
+func getClient(ctx context.Context, projectID string) (*pubSubClient, error) {
+	client, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
 		log.Printf("Error when creating pubsub client. Err: %v", err)
 		return nil, err
@@ -23,15 +23,15 @@ func getClient(projectID string) (*pubSubClient, error) {
 }
 
 // topicExists checks if a given topic exists
-func (client *pubSubClient) topicExists(topicName string) (bool, error) {
+func (client *pubSubClient) topicExists(ctx context.Context, topicName string) (bool, error) {
 	topic := client.psclient.Topic(topicName)
-	return topic.Exists(context.Background())
+	return topic.Exists(ctx)
 }
 
 // createTopic creates a topic if a topic name does not exist or returns one
 // if it is already present
-func (client *pubSubClient) createTopic(topicName string) (*pubsub.Topic, error) {
-	topicExists, err := client.topicExists(topicName)
+func (client *pubSubClient) createTopic(ctx context.Context, topicName string) (*pubsub.Topic, error) {
+	topicExists, err := client.topicExists(ctx, topicName)
 	if err != nil {
 		log.Printf("Could not check if topic exists. Error: %+v", err)
 		return nil, err
@@ -39,7 +39,7 @@ func (client *pubSubClient) createTopic(topicName string) (*pubsub.Topic, error)
 	var topic *pubsub.Topic
 
 	if !topicExists {
-		topic, err = client.psclient.CreateTopic(context.Background(), topicName)
+		topic, err = client.psclient.CreateTopic(ctx, topicName)
 		if err != nil {
 			log.Printf("Could not create topic. Err: %+v", err)
 			return nil, err
@@ -52,10 +52,10 @@ func (client *pubSubClient) createTopic(topicName string) (*pubsub.Topic, error)
 }
 
 // createSubscription creates the subscription to a topic
-func (client *pubSubClient) createSubscription(subscriptionName string, topic *pubsub.Topic) (*pubsub.Subscription, error) {
+func (client *pubSubClient) createSubscription(ctx context.Context, subscriptionName string, topic *pubsub.Topic) (*pubsub.Subscription, error) {
 	subscription := client.psclient.Subscription(subscriptionName)
 
-	subscriptionExists, err := subscription.Exists(context.Background())
+	subscriptionExists, err := subscription.Exists(ctx)
 	if err != nil {
 		log.Printf("Could not check if subscription %s exists. Err: %v", subscriptionName, err)
 		return nil, err
@@ -71,7 +71,7 @@ func (client *pubSubClient) createSubscription(subscriptionName string, topic *p
 			AckDeadline: 60 * time.Second,
 		}
 
-		subscription, err = client.psclient.CreateSubscription(context.Background(), subscriptionName, cfg)
+		subscription, err = client.psclient.CreateSubscription(ctx, subscriptionName, cfg)
 		if err != nil {
 			log.Printf("Could not create subscription %s. Err: %v", subscriptionName, err)
 			return nil, err
@@ -90,20 +90,20 @@ func (client *pubSubClient) createSubscription(subscriptionName string, topic *p
 }
 
 // subscriptionExists checks if a given subscription exists
-func (client *pubSubClient) subscriptionExists(subscriptionName string) (bool, error) {
+func (client *pubSubClient) subscriptionExists(ctx context.Context, subscriptionName string) (bool, error) {
 	subscription := client.psclient.Subscription(subscriptionName)
-	return subscription.Exists(context.Background())
+	return subscription.Exists(ctx)
 }
 
 // deleteSubscription deletes a subscription
-func (client *pubSubClient) deleteSubscription(subscriptionName string) error {
-	return client.psclient.Subscription(subscriptionName).Delete(context.Background())
+func (client *pubSubClient) deleteSubscription(ctx context.Context, subscriptionName string) error {
+	return client.psclient.Subscription(subscriptionName).Delete(ctx)
 }
 
 // listAllSubscription lists all subscriptions in the project
-func (client *pubSubClient) listAllSubscription(topicName string) ([]string, error) {
+func (client *pubSubClient) listAllSubscription(ctx context.Context, topicName string) ([]string, error) {
 	subscriptionNames := make([]string, 0)
-	subscriptionIterator := client.psclient.Subscriptions(context.Background())
+	subscriptionIterator := client.psclient.Subscriptions(ctx)
 	for {
 		item, err := subscriptionIterator.Next()
 		if err == iterator.Done {
